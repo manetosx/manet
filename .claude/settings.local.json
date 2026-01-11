@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mongod:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTYzNzEyZjkzMWMwYWE2MGQ3Y2YwMjEiLCJpYXQiOjE3NjgxMjQ3MjQsImV4cCI6MTc2ODcyOTUyNH0.2LD38rLsny2nSXbuZe4PUU9_ApLohVH6LuwUFFYEBJk\")",
+      "Bash(node test-websocket.js:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
