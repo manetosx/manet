@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    default: 'Hey there! I am using Messenger'
+    default: 'Hey there! I am using maNet'
   },
   lastSeen: {
     type: Date,
