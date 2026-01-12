@@ -124,7 +124,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The backend will start on `http://localhost:3000`
+The backend will start on `http://localhost:3000 (localhost for now)`
 
 ### 3. Mobile App Setup
 
@@ -144,7 +144,7 @@ npm run ios      # For iOS
 
 ### Base URL
 ```
-http://localhost:3000/api
+http://localhost:3000/api  (localhost for now)
 ```
 
 ### Authentication Endpoints
