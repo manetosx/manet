@@ -3,8 +3,8 @@
  * Phase 2: Mobile App Foundation
  */
 
-import React from 'react';
-import { StatusBar, useColorScheme } from 'react-native';
+import React, { useEffect } from 'react';
+import { StatusBar, useColorScheme, LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -12,6 +12,13 @@ import 'react-native-gesture-handler';
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
+
+  // Suppress InteractionManager deprecation warning from dependencies
+  useEffect(() => {
+    LogBox.ignoreLogs([
+      'InteractionManager has been deprecated',
+    ]);
+  }, []);
 
   return (
     <SafeAreaProvider>

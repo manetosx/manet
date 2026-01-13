@@ -32,3 +32,6 @@ build/
 *.tmp
 .cache/
 .claude/
+
+# Phase documentation (local only)
+PHASE_*.md
