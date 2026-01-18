@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -23,7 +25,7 @@ exports.register = async (req, res) => {
       message: 'User registered successfully',
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture
@@ -58,7 +60,7 @@ exports.login = async (req, res) => {
       message: 'Login successful',
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture,
@@ -143,7 +145,7 @@ exports.googleAuthMobile = async (req, res) => {
       message: 'Google login successful',
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture,
@@ -152,5 +154,178 @@ exports.googleAuthMobile = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Google authentication failed', error: error.message });
+  }
+};
+
+// Generate 6-digit code and send password reset email
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.json({ message: 'If an account exists with this email, a reset code has been sent' });
+    }
+
+    // Rate limiting: check if user requested reset in last 2 minutes
+    if (user.lastPasswordResetRequest) {
+      const timeSinceLastRequest = Date.now() - user.lastPasswordResetRequest.getTime();
+      const cooldownPeriod = 2 * 60 * 1000; // 2 minutes
+
+      if (timeSinceLastRequest < cooldownPeriod) {
+        const remainingSeconds = Math.ceil((cooldownPeriod - timeSinceLastRequest) / 1000);
+        return res.status(429).json({
+          message: `Please wait ${remainingSeconds} seconds before requesting another code`
+        });
+      }
+    }
+
+    // Generate 6-digit code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash the code before storing
+    const codeHash = crypto.createHash('sha256').update(resetCode).digest('hex');
+
+    // Set expiration to 15 minutes from now
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    // Update user with reset code info
+    user.resetPasswordCodeHash = codeHash;
+    user.resetPasswordExpires = expiresAt;
+    user.resetPasswordAttempts = 0;
+    user.lastPasswordResetRequest = new Date();
+    await user.save();
+
+    // Send email
+    const emailResult = await sendPasswordResetEmail(email, resetCode, user.username);
+
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      return res.status(500).json({ message: 'Failed to send reset email. Please try again later.' });
+    }
+
+    res.json({ message: 'If an account exists with this email, a reset code has been sent' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Verify the reset code and return a temporary token
+exports.verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email and code are required' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired reset code' });
+    }
+
+    // Check if code has expired
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+      return res.status(400).json({ message: 'Reset code has expired. Please request a new one.' });
+    }
+
+    // Check brute-force protection (max 5 attempts)
+    if (user.resetPasswordAttempts >= 5) {
+      // Clear the reset code to force user to request a new one
+      user.resetPasswordCodeHash = null;
+      user.resetPasswordExpires = null;
+      user.resetPasswordAttempts = 0;
+      await user.save();
+
+      return res.status(400).json({
+        message: 'Too many failed attempts. Please request a new reset code.'
+      });
+    }
+
+    // Hash the provided code and compare
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+    if (codeHash !== user.resetPasswordCodeHash) {
+      user.resetPasswordAttempts += 1;
+      await user.save();
+
+      const remainingAttempts = 5 - user.resetPasswordAttempts;
+      return res.status(400).json({
+        message: `Invalid code. ${remainingAttempts} attempts remaining.`
+      });
+    }
+
+    // Code is valid - generate a temporary reset token
+    const resetToken = jwt.sign(
+      { userId: user._id, purpose: 'password-reset' },
+      process.env.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+
+    // Clear the code (one-time use)
+    user.resetPasswordCodeHash = null;
+    user.resetPasswordExpires = null;
+    user.resetPasswordAttempts = 0;
+    await user.save();
+
+    res.json({
+      message: 'Code verified successfully',
+      resetToken
+    });
+  } catch (error) {
+    console.error('Verify reset code error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Reset password using the temporary token
+exports.resetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ message: 'Reset token and new password are required' });
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
+    // Verify the reset token
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    // Check token purpose
+    if (decoded.purpose !== 'password-reset') {
+      return res.status(400).json({ message: 'Invalid reset token' });
+    }
+
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+
+    // Update password (will be hashed by pre-save hook)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully. You can now login with your new password.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

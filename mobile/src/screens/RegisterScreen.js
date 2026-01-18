@@ -12,14 +12,27 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const RegisterScreen = ({ navigation }) => {
-  const { register } = useAuth();
+  const { register, googleSignIn } = useAuth();
+  const { theme } = useTheme();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    const result = await googleSignIn();
+    setGoogleLoading(false);
+
+    if (!result.success && result.error !== 'Sign-in was cancelled') {
+      Alert.alert('Google Sign-In Failed', result.error || 'Please try again');
+    }
+  };
 
   const handleRegister = async () => {
     if (!username || !email || !password || !confirmPassword) {
@@ -53,60 +66,76 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Create Account</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Sign up to get started</Text>
 
           <View style={styles.form}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+                color: theme.inputText,
+              }]}
               placeholder="Username"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.inputPlaceholder}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
-              editable={!loading}
+              editable={!loading && !googleLoading}
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+                color: theme.inputText,
+              }]}
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.inputPlaceholder}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              editable={!loading}
+              editable={!loading && !googleLoading}
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+                color: theme.inputText,
+              }]}
               placeholder="Password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.inputPlaceholder}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              editable={!loading}
+              editable={!loading && !googleLoading}
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+                color: theme.inputText,
+              }]}
               placeholder="Confirm Password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.inputPlaceholder}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
-              editable={!loading}
+              editable={!loading && !googleLoading}
             />
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, { backgroundColor: theme.primary }, loading && styles.buttonDisabled]}
               onPress={handleRegister}
-              disabled={loading}
+              disabled={loading || googleLoading}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
@@ -116,22 +145,30 @@ const RegisterScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+              <Text style={[styles.dividerText, { color: theme.textSecondary }]}>OR</Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
             </View>
 
             <TouchableOpacity
-              style={styles.googleButton}
-              disabled={loading}
+              style={[styles.googleButton, {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              }, googleLoading && styles.buttonDisabled]}
+              onPress={handleGoogleSignIn}
+              disabled={loading || googleLoading}
             >
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
+              {googleLoading ? (
+                <ActivityIndicator color={theme.text} />
+              ) : (
+                <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
+              <Text style={[styles.footerText, { color: theme.textSecondary }]}>Already have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.linkText}>Sign In</Text>
+                <Text style={[styles.linkText, { color: theme.primary }]}>Sign In</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -12,12 +12,25 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const LoginScreen = ({ navigation }) => {
-  const { login } = useAuth();
+  const { login, googleSignIn } = useAuth();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    const result = await googleSignIn();
+    setGoogleLoading(false);
+
+    if (!result.success && result.error !== 'Sign-in was cancelled') {
+      Alert.alert('Google Sign-In Failed', result.error || 'Please try again');
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -36,19 +49,23 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>Welcome to maNet</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Welcome to maNet</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Sign in to continue</Text>
 
           <View style={styles.form}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+                color: theme.inputText,
+              }]}
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.inputPlaceholder}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -57,9 +74,13 @@ const LoginScreen = ({ navigation }) => {
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, {
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.inputBorder,
+                color: theme.inputText,
+              }]}
               placeholder="Password"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.inputPlaceholder}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -67,7 +88,14 @@ const LoginScreen = ({ navigation }) => {
             />
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={styles.forgotPassword}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: theme.primary }, loading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -79,22 +107,30 @@ const LoginScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
+              <Text style={[styles.dividerText, { color: theme.textSecondary }]}>OR</Text>
+              <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
             </View>
 
             <TouchableOpacity
-              style={styles.googleButton}
-              disabled={loading}
+              style={[styles.googleButton, {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+              }, googleLoading && styles.buttonDisabled]}
+              onPress={handleGoogleSignIn}
+              disabled={loading || googleLoading}
             >
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
+              {googleLoading ? (
+                <ActivityIndicator color={theme.text} />
+              ) : (
+                <Text style={[styles.googleButtonText, { color: theme.text }]}>Continue with Google</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
+              <Text style={[styles.footerText, { color: theme.textSecondary }]}>Don't have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.linkText}>Sign Up</Text>
+                <Text style={[styles.linkText, { color: theme.primary }]}>Sign Up</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -107,7 +143,6 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollContent: {
     flexGrow: 1,
@@ -120,28 +155,32 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 32,
   },
   form: {
     width: '100%',
   },
   input: {
-    backgroundColor: '#f5f5f5',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginBottom: 8,
+    marginTop: -8,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   button: {
-    backgroundColor: '#007AFF',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -163,23 +202,18 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
   },
   dividerText: {
     marginHorizontal: 16,
-    color: '#999',
     fontSize: 14,
   },
   googleButton: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   googleButtonText: {
-    color: '#333',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -189,11 +223,9 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   footerText: {
-    color: '#666',
     fontSize: 14,
   },
   linkText: {
-    color: '#007AFF',
     fontSize: 14,
     fontWeight: '600',
   },

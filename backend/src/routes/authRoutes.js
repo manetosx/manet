@@ -17,6 +17,11 @@ router.get('/google/callback',
 
 router.post('/google/mobile', authController.googleAuthMobile);
 
+// Password reset routes
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/verify-reset-code', authController.verifyResetCode);
+router.post('/reset-password', authController.resetPassword);
+
 router.get('/error', (req, res) => {
   res.status(401).json({ message: 'Authentication failed' });
 });

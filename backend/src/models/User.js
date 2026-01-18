@@ -47,6 +47,27 @@ const userSchema = new mongoose.Schema({
   isOnline: {
     type: Boolean,
     default: false
+  },
+  fcmToken: {
+    type: String,
+    default: ''
+  },
+  // Password reset fields
+  resetPasswordCodeHash: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
+  },
+  resetPasswordAttempts: {
+    type: Number,
+    default: 0
+  },
+  lastPasswordResetRequest: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

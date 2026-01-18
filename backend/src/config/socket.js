@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const onlineUsers = new Map();
 
 module.exports = (io) => {
+  // Attach onlineUsers to io so it can be accessed from controllers
+  io.onlineUsers = onlineUsers;
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
 
@@ -20,9 +22,10 @@ module.exports = (io) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.userId}`);
+    console.log(`✅ User connected: ${socket.userId} (socket: ${socket.id})`);
     onlineUsers.set(socket.userId, socket.id);
 
+    console.log('📡 Current online users:', Array.from(onlineUsers.keys()));
     io.emit('users:online', Array.from(onlineUsers.keys()));
 
     socket.on('message:send', async (data) => {

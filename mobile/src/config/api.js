@@ -11,7 +11,7 @@ const getBaseURL = () => {
   if (__DEV__) {
     // Development environment
     if (Platform.OS === 'android') {
-      return 'http://192.168.1.243:3000/api';
+      return 'http://192.168.0.53:3000/api';
     }
     return 'http://localhost:3000/api';
   }
@@ -30,11 +30,17 @@ export const ENDPOINTS = {
     LOGIN: '/auth/login',
     LOGOUT: '/auth/logout',
     GOOGLE_MOBILE: '/auth/google/mobile',
+    FORGOT_PASSWORD: '/auth/forgot-password',
+    VERIFY_RESET_CODE: '/auth/verify-reset-code',
+    RESET_PASSWORD: '/auth/reset-password',
   },
   // Users
   USERS: {
     PROFILE: '/users/profile',
+    UPDATE_PROFILE: '/users/profile',
+    UPDATE_FCM_TOKEN: '/users/fcm-token',
     SEARCH: '/users/search',
+    DELETE_ACCOUNT: '/users/delete-account',
     BY_ID: (id) => `/users/${id}`,
   },
   // Chats
@@ -44,6 +50,10 @@ export const ENDPOINTS = {
     BY_ID: (id) => `/chats/${id}`,
     ADD_PARTICIPANTS: (id) => `/chats/${id}/participants`,
     LEAVE: (id) => `/chats/${id}/leave`,
+    PIN: (id) => `/chats/${id}/pin`,
+    MUTE: (id) => `/chats/${id}/mute`,
+    UNMUTE: (id) => `/chats/${id}/mute`,
+    DELETE: (id) => `/chats/${id}`,
   },
   // Messages
   MESSAGES: {

@@ -1,5 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import authService from '../services/authService';
+import { registerForPushNotifications } from '../services/notificationService';
+import { configureGoogleSignIn, signInWithGoogle, signOutFromGoogle } from '../services/googleAuthService';
+
+// Web Client ID from Google Cloud Console
+const GOOGLE_WEB_CLIENT_ID = '896235621488-eps5s9pc4ilab0kfgbhfvnmu5899p2ai.apps.googleusercontent.com';
 
 const AuthContext = createContext({});
 
@@ -8,8 +13,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is already logged in on app start
+  // Configure Google Sign-In and check auth status on app start
   useEffect(() => {
+    configureGoogleSignIn(GOOGLE_WEB_CLIENT_ID);
     checkAuthStatus();
   }, []);
 
@@ -21,6 +27,8 @@ export const AuthProvider = ({ children }) => {
       if (storedUser && token) {
         setUser(storedUser);
         setIsAuthenticated(true);
+        // Register for push notifications after authentication is confirmed
+        registerForPushNotifications();
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -36,6 +44,8 @@ export const AuthProvider = ({ children }) => {
       if (result.success) {
         setUser(result.user);
         setIsAuthenticated(true);
+        // Register for push notifications after successful login
+        registerForPushNotifications();
         return { success: true };
       } else {
         return { success: false, error: result.error };
@@ -52,6 +62,8 @@ export const AuthProvider = ({ children }) => {
       if (result.success) {
         setUser(result.user);
         setIsAuthenticated(true);
+        // Register for push notifications after successful registration
+        registerForPushNotifications();
         return { success: true };
       } else {
         return { success: false, error: result.error };
@@ -61,13 +73,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const googleSignIn = async (idToken) => {
+  const googleSignIn = async () => {
     try {
-      const result = await authService.googleSignIn(idToken);
+      // Use the Google Sign-In service which handles everything
+      const result = await signInWithGoogle();
 
       if (result.success) {
         setUser(result.user);
         setIsAuthenticated(true);
+        // Store auth data
+        await authService.storeAuthData(result.token, result.user);
+        // Register for push notifications after successful Google sign-in
+        registerForPushNotifications();
         return { success: true };
       } else {
         return { success: false, error: result.error };
@@ -80,6 +97,8 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await authService.logout();
+      // Also sign out from Google if signed in
+      await signOutFromGoogle();
       setUser(null);
       setIsAuthenticated(false);
     } catch (error) {

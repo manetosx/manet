@@ -24,7 +24,20 @@ const chatSchema = new mongoose.Schema({
   groupPicture: {
     type: String,
     default: ''
-  }
+  },
+  pinnedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  mutedBy: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    mutedUntil: {
+      type: Date
+    }
+  }]
 }, {
   timestamps: true
 });

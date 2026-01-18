@@ -1,5 +1,21 @@
 const Message = require('../models/Message');
 const Chat = require('../models/Chat');
+const { sendMessageNotification } = require('../services/notificationService');
+
+// Get io instance from server
+let io;
+const setIO = (ioInstance) => {
+  io = ioInstance;
+};
+
+// Helper to get online users map
+const getOnlineUsers = () => {
+  if (!io) return new Map();
+  // Access the onlineUsers from socket config
+  return io.onlineUsers || new Map();
+};
+
+exports.setIO = setIO;
 
 exports.sendMessage = async (req, res) => {
   try {
@@ -27,6 +43,46 @@ exports.sendMessage = async (req, res) => {
 
     const populatedMessage = await Message.findById(message._id)
       .populate('senderId', 'username profilePicture');
+
+    // Emit via WebSocket to other participants
+    const onlineUserIds = [];
+    if (io) {
+      const onlineUsers = getOnlineUsers();
+      console.log('📡 Online users:', Array.from(onlineUsers.keys()));
+      console.log('📤 Sending message to chat participants:', chat.participants.map(p => p.toString()));
+
+      chat.participants.forEach(participantId => {
+        if (participantId.toString() !== req.user._id.toString()) {
+          const socketId = onlineUsers.get(participantId.toString());
+          console.log(`👤 Participant ${participantId}: socketId=${socketId}`);
+          if (socketId) {
+            onlineUserIds.push(participantId.toString());
+            io.to(socketId).emit('message:received', populatedMessage);
+            console.log(`✅ Emitted message:received to ${participantId} via socket ${socketId}`);
+          }
+        }
+      });
+    }
+
+    // Send push notifications to offline users
+    // Only send if user is not currently online in the chat
+    const offlineParticipants = chat.participants.filter(
+      participantId =>
+        participantId.toString() !== req.user._id.toString() &&
+        !onlineUserIds.includes(participantId.toString())
+    );
+
+    console.log('📱 Offline participants for push notifications:', offlineParticipants.map(p => p.toString()));
+
+    if (offlineParticipants.length > 0) {
+      // Send notification asynchronously (don't wait for it)
+      console.log('🔔 Sending push notifications to', offlineParticipants.length, 'offline users');
+      sendMessageNotification(message, chat, req.user).catch(err =>
+        console.error('❌ Notification error:', err.message)
+      );
+    } else {
+      console.log('✋ No offline participants, skipping push notifications');
+    }
 
     res.status(201).json({ message: populatedMessage });
   } catch (error) {
@@ -56,7 +112,8 @@ exports.getMessages = async (req, res) => {
     const messages = await Message.find(query)
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
-      .populate('senderId', 'username profilePicture');
+      .populate('senderId', 'username profilePicture')
+      .populate('readBy.userId', 'username profilePicture');
 
     res.json({ messages: messages.reverse() });
   } catch (error) {
@@ -68,7 +125,8 @@ exports.markAsRead = async (req, res) => {
   try {
     const { messageId } = req.params;
 
-    const message = await Message.findById(messageId);
+    const message = await Message.findById(messageId)
+      .populate('senderId', 'username profilePicture');
     if (!message) {
       return res.status(404).json({ message: 'Message not found' });
     }
@@ -80,6 +138,33 @@ exports.markAsRead = async (req, res) => {
     if (!alreadyRead) {
       message.readBy.push({ userId: req.user._id });
       await message.save();
+
+      // Get the chat to find all participants
+      const chat = await Chat.findById(message.chatId);
+
+      // Populate readBy with user details for display
+      const populatedMessage = await Message.findById(message._id)
+        .populate('readBy.userId', 'username profilePicture');
+
+      // Emit read receipt to ALL participants in the chat (for group visibility)
+      if (io && chat) {
+        const onlineUsers = getOnlineUsers();
+
+        chat.participants.forEach(participantId => {
+          // Don't send to the person who just read it
+          if (participantId.toString() !== req.user._id.toString()) {
+            const socketId = onlineUsers.get(participantId.toString());
+            if (socketId) {
+              io.to(socketId).emit('message:read', {
+                messageId: message._id,
+                readBy: populatedMessage.readBy,
+                chatId: message.chatId,
+                readByUserId: req.user._id
+              });
+            }
+          }
+        });
+      }
     }
 
     res.json({ message: 'Message marked as read' });

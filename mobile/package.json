@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-firebase/app": "^23.8.2",
+    "@react-native-firebase/messaging": "^23.8.2",
     "@react-native-google-signin/google-signin": "^16.1.1",
     "@react-native/new-app-screen": "0.83.1",
     "@react-navigation/native": "^7.1.26",
@@ -19,8 +21,10 @@
     "react": "19.2.0",
     "react-native": "0.83.1",
     "react-native-gesture-handler": "^2.30.0",
+    "react-native-image-picker": "^8.2.1",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "^4.19.0",
+    "react-native-svg": "^15.15.1",
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
@@ -41,6 +45,7 @@
     "jest": "^29.6.3",
     "prettier": "2.8.8",
     "react-test-renderer": "19.2.0",
+    "sharp": "^0.34.5",
     "typescript": "^5.8.3"
   },
   "engines": {
