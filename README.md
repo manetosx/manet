@@ -492,7 +492,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - MongoDB documentation
 - Socket.IO tutorials
 - Firebase documentation
-- **Claude Code by Anthropic** - An invaluable development partner that helped debug countless issues and think through complex problems
+- **Claude Code by Anthropic** - Used as an LLM development assistant for debugging support, architectural review, and identifying edge cases. All implementation, integration, and final technical decisions were made and validated by me.
 - Open source contributors
 
 ## 📞 Contact & Support
