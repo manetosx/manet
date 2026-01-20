@@ -136,6 +136,12 @@ maNet is a **fully-featured, production-ready** real-time messaging application 
   - Enhanced error handling
   - Performance tuning
 
+## 🧠 Development Approach
+
+This project was designed and implemented as a real world, production style system.  
+I focused on clean architecture, security best practices, scalability, and maintainability.
+
+LLM tooling (Claude Code) was used selectively as a development assistant for debugging, code review, and architectural validation, similar to a senior engineering peer review. All code was integrated, tested, and finalized by me.
 ## 🛠 Tech Stack
 
 ### Backend
